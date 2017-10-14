@@ -1,0 +1,13 @@
+#!/bin/bash
+
+yes | apt-get install numlockx
+echo "greeter-setup-script=/usr/bin/numlockx on" | tee -a /etc/lightdm/lightdm.conf
+
+#Ensure that numlockx is installed:
+#sudo apt-get install numlockx
+
+#Edit the file /etc/lightdm/lightdm.conf
+#nano /etc/lightdm/lightdm.conf
+
+#Add the following line to the file:
+#greeter-setup-script=/usr/bin/numlockx on
