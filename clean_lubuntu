@@ -1,0 +1,2 @@
+#/bin/bash
+yes | apt purge firefox abiword gnumeric transmission* audacious pidgin mtpaint
