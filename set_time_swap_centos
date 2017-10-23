@@ -1,0 +1,25 @@
+#!/bin/bash
+yum -y install nano screen wget curl zip unzip net-tools which
+yum -y install virt-what && virt-what
+################################################ NGÀY GIỜ
+echo "ZONE="Asia/Ho_Chi_Minh"" >  /etc/sysconfig/clock 
+source /etc/sysconfig/clock
+rm -rf /etc/localtime && cp -p /usr/share/zoneinfo/Asia/Ho_Chi_Minh /etc/localtime 
+yum -y install ntp ntpdate which
+echo '#!/bin/sh' > /etc/cron.daily/ntpdate
+echo "$(which ntpdate) -s pool.ntp.org" >> /etc/cron.daily/ntpdate
+chmod 775 /etc/cron.daily/ntpdate
+ntpdate -s pool.ntp.org
+date +"-DATE-%d-%m-%Y_TIME-%Hh%M-"
+cat /etc/selinux/config
+sed -i 's/SELINUX=enforcing/SELINUX=disabled/g' /etc/sysconfig/selinux
+sed -i 's/SELINUX=enforcing/SELINUX=disabled/g' /etc/selinux/config
+setenforce 0 2>/dev/null
+cat /etc/selinux/config
+free -m
+################################# SWAP
+dd if=/dev/zero of=/swapfile bs=1024 count=1024k
+mkswap /swapfile
+swapon /swapfile #swapoff /swapfile để xóa cái cũ đi tạo lại swap mới
+chown root:root /swapfile && chmod 0600 /swapfile
+echo "/swapfile none swap sw 0 0" >> /etc/fstab && cat /etc/fstab && free -m
