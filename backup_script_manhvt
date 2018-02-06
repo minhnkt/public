@@ -1,0 +1,70 @@
+#!/bin/bash
+
+#Backup Server and Upload to Google Drive
+#Install Rclone to connect Drive Cloud
+#cd /root/
+#wget http://downloads.rclone.org/rclone-v1.33-linux-amd64.zip
+#unzip rclone-v1.33-linux-amd64.zip
+#cp rclone-v*-linux-amd64/rclone /usr/sbin/
+#rm -rf rclone-*
+#EDITOR=nano crontab -e
+#0 2 * * * /root/backup.sh > /dev/null 2>&1
+
+#Input Variable
+SERVER_NAME=LocalCheck
+DAY_STORE=1
+#Name of Drive Cloud configured in rclone
+REMOTE=---------------------
+####################################################################################################################################################################
+TIMESTAMP=$(date +"%Y-%m-%d_%H-%M")
+BACKUP_DIR="/usr/backup/$TIMESTAMP"
+MYSQL_USER="root"
+MYSQL=/usr/bin/mysql
+MYSQL_PASSWORD=123456
+MYSQLDUMP=/usr/bin/mysqldump
+SECONDS=0
+
+
+#Backup Databases
+mkdir -p "$BACKUP_DIR/database"
+echo "Starting Backup Database";
+databases=`$MYSQL --user=$MYSQL_USER -p$MYSQL_PASSWORD -e "SHOW DATABASES;" | grep -Ev "(Database|information_schema|performance_schema|mysql)"`
+        for db in $databases; do
+        $MYSQLDUMP --force --opt --user=$MYSQL_USER -p$MYSQL_PASSWORD -e --opt -c --databases $db | gzip -c > "$BACKUP_DIR/database/$db.gz"
+        done
+echo "Finished";
+echo '';
+
+
+#Backup Source
+mkdir -p "$BACKUP_DIR/code"
+echo "Starting Backup Website";
+#Loop through /home directory
+	for D in /var/www*; do
+		if [ -d "${D}" ]; then #If a directory
+		domain=${D##*/} # Domain name
+		echo "- "$domain;
+		zip -r $BACKUP_DIR/code/$domain.zip /var/www/$domain/ -q -x /var/www/$domain/public_html/wp-content/cache/**\* #Exclude cache
+	fi
+done
+echo "Finished";
+echo '';
+
+
+#Start Upload Backed Up Folder
+echo "Starting Uploading Backup";
+	/usr/sbin/rclone copy /usr/backup/$TIMESTAMP/ "$REMOTE:VPS-Backup/$SERVER_NAME/$TIMESTAMP" >> /var/log/rclone.log 2>&1
+	/usr/sbin/rclone -q --min-age 2w delete "$REMOTE:VPS-Backup/$SERVER_NAME/$TIMESTAMP" #Remove all backups older than 2 week
+echo "Finished";
+echo '';
+
+#Remove older backups (depend on $DAY_STORE)
+#find /usr/backup/ -mindepth 1 -mtime +"$DAY_STORE" -delete
+
+#Remove older folder backups (depend on $DAY_STORE)
+find /usr/backup/ -maxdepth 1 -type d -ctime $DAY_STORE -exec echo "Removing Directory => {}" \; -exec rm -rf "{}" \;
+
+duration=$SECONDS
+echo "Total $size, $(($duration / 60)) minutes and $(($duration % 60)) seconds elapsed."
+
+rm -rf /usr/backup/*
